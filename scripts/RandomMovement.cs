@@ -1,51 +1,72 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI; //important
+using UnityEngine.AI;
 
-//if you use this code you are contractually obligated to like the YT video
-public class RandomMovement : MonoBehaviour //don't forget to change the script name if you haven't
+public class RandomMovement : MonoBehaviour
 {
     public NavMeshAgent agent;
-    public float range; //radius of sphere
-    public float detectionRange = 0.05f;
+    public float range; // Radius of the area the agent moves within
+    public float detectionRange = 10f;
+    public float insideattackrange =4f;
     private Animator anim;
     public Transform player;
-    public Transform centrePoint; //centre of the area the agent wants to move around in
-    //instead of centrePoint you can set it as the transform of the agent if you don't care about a specific area
-
+    public Transform centrePoint; // Centre of the area for random movement
+    private ParticleSystem particlesys;
+    private AudioSource audiosource;
+    private EnemyFire enemyfire;
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        anim = GetComponent<Animator>();
-    }
+        enemyfire= GetComponent<EnemyFire>();
+        audiosource= GetComponent<AudioSource>();
+        Transform ghostTransform = transform.Find("Ghostface");
+        if (ghostTransform != null)
+        {
+            anim = ghostTransform.GetComponent<Animator>();
+            if (anim == null)
+            {
+                Debug.LogWarning("Animator component not found on 'Ghostface'.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Child GameObject 'Ghostface' not found.");
+        }
 
+
+
+    }
 
     void Update()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-        // If the distance to the player is smaller than the detection range
         if (distanceToPlayer <= detectionRange)
         {
+           
             agent.SetDestination(player.position);
-            // Disable the NavMeshAgent to stop the random movement
-            if (distanceToPlayer <= 2)
+            if (distanceToPlayer <= insideattackrange)
             {
-                agent.enabled = false;
-                anim.SetBool("iswalking", false);
-            }
+               
+                audiosource.Stop();
+               
 
-            // Set the destination of the NavMeshAgent to the player's position
-          
+                agent.enabled = false;
+                LookAtPlayer();
+                anim.SetBool("iswalking", false);
+                enemyfire.enabled = true;
+
+
+            }
+           
         }
         else
-        {
-            // Enable the NavMeshAgent for random movement if the player is out of range
+        {  
+            audiosource.Play();
+            enemyfire.enabled= false;
             agent.enabled = true;
             anim.SetBool("iswalking", true);
-
-            // If the agent is done with its path, generate a new random destination
             if (agent.remainingDistance <= agent.stoppingDistance)
             {
                 Vector3 point;
@@ -58,15 +79,22 @@ public class RandomMovement : MonoBehaviour //don't forget to change the script 
         }
     }
 
+    void LookAtPlayer()
+    {
+        Vector3 direction = player.position - transform.position;
+        direction.y = 0; // Keep only the horizontal rotation
+        if (direction.magnitude > 0.1f)
+        {
+            transform.rotation = Quaternion.LookRotation(direction);
+        }
+    }
+
     bool RandomPoint(Vector3 center, float range, out Vector3 result)
     {
-
-        Vector3 randomPoint = center + Random.insideUnitSphere * range; //random point in a sphere 
+        Vector3 randomPoint = center + Random.insideUnitSphere * range;
         NavMeshHit hit;
-        if (NavMesh.SamplePosition(randomPoint, out hit, 1.0f, NavMesh.AllAreas)) //documentation: https://docs.unity3d.com/ScriptReference/AI.NavMesh.SamplePosition.html
+        if (NavMesh.SamplePosition(randomPoint, out hit, 1.0f, NavMesh.AllAreas))
         {
-            //the 1.0f is the max distance from the random point to a point on the navmesh, might want to increase if range is big
-            //or add a for loop like in the documentation
             result = hit.position;
             return true;
         }

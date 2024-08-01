@@ -5,34 +5,51 @@ using UnityEngine.AI;
 
 public class ai : MonoBehaviour
 {
-    // Start is called before the first frame update
     public Transform player;
     private NavMeshAgent agent;
     private Animator anim;
-    public float detectionRange = 0.05f;
-  
+    public float detectionRange = 1f;
+
     void Start()
     {
-        agent= GetComponent<NavMeshAgent>();
-        anim = GetComponent<Animator>();
+        // Get the NavMeshAgent component from the current GameObject
+        agent = GetComponent<NavMeshAgent>();
+
+        Transform ghostTransform = transform.Find("Ghostface");
+        if (ghostTransform != null)
+        {
+            anim = ghostTransform.GetComponent<Animator>();
+            if (anim == null)
+            {
+                Debug.LogWarning("Animator component not found on 'Ghost'.");
+            }
+        }
+        else
+        {
+            Debug.LogWarning("Child GameObject 'Ghost' not found.");
+        }
     }
 
-    // Update is called once per frame
     void Update()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
-        agent.destination= player.position;
+        agent.destination = player.position;
+
         if (distanceToPlayer <= detectionRange)
         {
             agent.enabled = false;
-            anim.SetBool("iswalking", false);
-            
+            if (anim != null)
+            {
+                anim.SetBool("iswalking", false);
+            }
         }
         else
         {
             agent.enabled = true;
-            anim.SetBool("iswalking", true);
-
+            if (anim != null)
+            {
+                anim.SetBool("iswalking", true);
+            }
         }
     }
 }
